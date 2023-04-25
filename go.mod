@@ -1,3 +1,3 @@
-module github.com/lmittmann/tint
+module github.com/xy-planning-network/tint
 
 go 1.21

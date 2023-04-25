@@ -72,7 +72,7 @@ const (
 	ansiFaint          = "\033[2m"
 	ansiResetFaint     = "\033[22m"
 	ansiBrightRed      = "\033[91m"
-	ansiBrightGreen    = "\033[92m"
+	ansiBrightGreen    = "\033[94m" // NOTE(dlk): it's blue
 	ansiBrightYellow   = "\033[93m"
 	ansiBrightRedFaint = "\033[91;2m"
 )
@@ -222,11 +222,15 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	}
 
 	// write message
+	var msg string
 	if rep == nil {
-		buf.WriteString(r.Message)
-		buf.WriteByte(' ')
+		msg = r.Message
 	} else if a := rep(nil /* groups */, slog.String(slog.MessageKey, r.Message)); a.Key != "" {
-		appendValue(buf, a.Value, false)
+		msg = a.Value.String()
+	}
+
+	if msg != "" {
+		h.appendMessage(buf, r.Level, msg)
 		buf.WriteByte(' ')
 	}
 
@@ -366,6 +370,21 @@ func (h *handler) appendKey(buf *buffer, key, groups string) {
 	buf.WriteStringIf(!h.noColor, ansiFaint)
 	appendString(buf, groups+key, true)
 	buf.WriteByte('=')
+	buf.WriteStringIf(!h.noColor, ansiReset)
+}
+
+func (h *handler) appendMessage(buf *buffer, level slog.Level, msg string) {
+	switch {
+	case level < slog.LevelInfo:
+	case level < slog.LevelWarn:
+		buf.WriteStringIf(!h.noColor, ansiBrightGreen)
+	case level < slog.LevelError:
+		buf.WriteStringIf(!h.noColor, ansiBrightYellow)
+	default:
+		buf.WriteStringIf(!h.noColor, ansiBrightRed)
+	}
+
+	buf.WriteString(msg)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
